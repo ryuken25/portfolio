@@ -19,6 +19,9 @@ export const site = {
   telegram: "https://t.me/kenshi25",
   telegramHandle: "kenshi25",
   resume: "/resume.pdf",
+  photo: "/arya.jpg",
+  photoWebp: "/arya.webp",
+  photoAlt: "Portrait of Arya Bhanu wearing a dark suit against a blue background.",
 } as const;
 
 export const proof = [
