@@ -1,17 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, IBM_Plex_Sans, JetBrains_Mono } from "next/font/google";
+import { Space_Grotesk, IBM_Plex_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { site, SITE_URL } from "@/data/content";
 
-// Characterful display face for headings.
-const display = Bricolage_Grotesque({
+// Display face for headings + brand.
+const display = Space_Grotesk({
   subsets: ["latin"],
-  weight: ["600", "700", "800"],
+  weight: ["400", "500", "700"],
   variable: "--font-display",
   display: "swap",
 });
 
-// Clean, readable body face (deliberately not Inter).
+// Clean body face.
 const body = IBM_Plex_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
@@ -19,7 +19,7 @@ const body = IBM_Plex_Sans({
   display: "swap",
 });
 
-// Monospace for tags, labels, and the terminal log lines.
+// Monospace for tags, labels, and the terminal log.
 const mono = JetBrains_Mono({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
@@ -29,9 +29,9 @@ const mono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "Arya Bhanu — AI Full-Stack & Automation Developer",
+  title: "Winayagatar — AI Full-Stack & Automation Developer",
   description: site.metaDescription,
-  applicationName: "Arya Bhanu — Portfolio",
+  applicationName: "Winayagatar — Portfolio",
   authors: [{ name: site.fullName }],
   keywords: [
     "Full-Stack Developer",
@@ -46,21 +46,21 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: SITE_URL,
-    siteName: "Arya Bhanu",
-    title: "Arya Bhanu — AI Full-Stack & Automation Developer",
+    siteName: "Winayagatar",
+    title: "Winayagatar — AI Full-Stack & Automation Developer",
     description: site.metaDescription,
     images: [
       {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "Arya Bhanu — AI Full-Stack & Automation Developer",
+        alt: "Winayagatar — AI Full-Stack & Automation Developer",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Arya Bhanu — AI Full-Stack & Automation Developer",
+    title: "Winayagatar — AI Full-Stack & Automation Developer",
     description: site.metaDescription,
     images: ["/og.png"],
   },
@@ -68,7 +68,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0B0B10",
+  themeColor: "#07090f",
   width: "device-width",
   initialScale: 1,
 };
