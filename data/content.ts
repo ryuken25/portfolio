@@ -1,7 +1,7 @@
 // Single source of truth for all page copy.
 // Edit text here without touching components.
 
-export const SITE_URL = "https://arya-bhanu.vercel.app";
+export const SITE_URL = "https://winayagatar.vercel.app";
 
 export const site = {
   name: "Arya Bhanu",
