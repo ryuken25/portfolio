@@ -49,6 +49,7 @@ export default function Portfolio() {
   const rootRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLCanvasElement>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
 
   const [count, setCount] = useState(terminalLines.length);
   const [filter, setFilter] = useState<Filter>("All");
@@ -227,6 +228,30 @@ export default function Portfolio() {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("pointermove", onMove);
     };
+  }, []);
+
+  // Scroll-driven experience timeline: fill line grows and dots light up as it passes.
+  useEffect(() => {
+    const wrap = timelineRef.current;
+    if (!wrap) return;
+    const fill = wrap.querySelector<HTMLElement>("[data-tl-fill]");
+    const dots = Array.from(wrap.querySelectorAll<HTMLElement>("[data-tl-dot]"));
+    const paint = () => {
+      const r = wrap.getBoundingClientRect();
+      const focus = window.innerHeight * 0.65;
+      const progress = Math.max(0, Math.min(1, (focus - r.top) / r.height));
+      if (fill) fill.style.height = progress * 100 + "%";
+      const fillY = r.top + 10 + progress * (r.height - 20);
+      dots.forEach((d) => {
+        const on = d.getBoundingClientRect().top <= fillY;
+        d.style.borderColor = on ? "#4c8df6" : "#2a3245";
+        d.style.boxShadow = on ? "0 0 14px rgba(76,141,246,0.7)" : "none";
+        d.style.transform = on ? "scale(1.12)" : "scale(1)";
+      });
+    };
+    window.addEventListener("scroll", paint, { passive: true });
+    paint();
+    return () => window.removeEventListener("scroll", paint);
   }, []);
 
   const all = projects.filter((p) => matchesFilter(p, filter));
@@ -523,8 +548,9 @@ export default function Portfolio() {
           <section id="experience" style={{ paddingBottom: "clamp(52px, 8vw, 88px)" }}>
             <p style={eyebrowStyle}>{eyebrows.experience}</p>
             <h2 style={h2Style}>Experience</h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: 0, position: "relative" }}>
-              <div aria-hidden="true" style={{ position: "absolute", left: 8, top: 10, bottom: 10, width: 1, background: "linear-gradient(180deg, #4c8df6, #1b2130 70%)" }} />
+            <div ref={timelineRef} style={{ display: "flex", flexDirection: "column", gap: 0, position: "relative" }}>
+              <div aria-hidden="true" style={{ position: "absolute", left: 8, top: 10, bottom: 10, width: 1, background: "#1b2130" }} />
+              <div data-tl-fill aria-hidden="true" style={{ position: "absolute", left: 8, top: 10, width: 1, height: "0%", maxHeight: "calc(100% - 20px)", background: "linear-gradient(180deg, #4c8df6, #8fb8fb)", boxShadow: "0 0 12px rgba(76,141,246,0.6)", transition: "height 0.15s linear" }} />
               {experience.map((job, idx) => {
                 const badge =
                   job.periodTone === "live"
@@ -532,7 +558,7 @@ export default function Portfolio() {
                     : { color: "#8fb8fb", background: "rgba(76,141,246,0.1)", border: "1px solid rgba(76,141,246,0.32)" };
                 return (
                   <div key={job.role} style={{ display: "flex", gap: 22, padding: idx < experience.length - 1 ? "0 0 30px" : "0" }}>
-                    <span aria-hidden="true" style={{ width: 17, height: 17, borderRadius: "50%", background: "#0d111a", border: `2px solid ${job.pulse ? "#4c8df6" : "#2a3245"}`, boxSizing: "border-box", flex: "none", marginTop: 4, position: "relative", zIndex: 1, animation: job.pulse ? "pulseDot 2.4s ease-in-out infinite" : undefined }} />
+                    <span data-tl-dot aria-hidden="true" style={{ width: 17, height: 17, borderRadius: "50%", background: "#0d111a", border: "2px solid #2a3245", boxSizing: "border-box", flex: "none", marginTop: 4, position: "relative", zIndex: 1, transition: "border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease", animation: job.pulse ? "pulseDot 2.4s ease-in-out infinite" : undefined }} />
                     <div className="exp-card" style={{ flex: 1, border: "1px solid #1b2130", borderRadius: 12, background: "#0d111a", padding: "20px 22px" }}>
                       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px 12px", marginBottom: 10 }}>
                         <h3 style={{ fontFamily: display, fontWeight: 700, fontSize: 17.5, margin: 0, letterSpacing: "-0.015em" }}>{job.role}</h3>
