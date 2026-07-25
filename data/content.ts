@@ -8,13 +8,14 @@ export const site = {
   fullName: "I Made Winayagatar Arya Bhanu",
   title: "AI Full-Stack Developer & Automation Engineer",
   cliHandle: "winayagatar",
+  availability: "AVAILABLE FOR WORK",
   locationLine1: "Tabanan, Bali",
   locationLine2: "Indonesia",
   relocation: "Open to relocation — Kuala Lumpur, Malaysia",
   heroOneLiner:
-    "I build web apps and automation systems. Three products live in production, 50+ bots delivered for clients since 2023.",
+    "I build web apps and automation systems. Four products live in production, 50+ bots delivered for clients since 2023.",
   metaDescription:
-    "Winayagatar is a full-stack and automation developer who ships production web apps and automation systems, with three products live and 50+ bots delivered since 2023.",
+    "Winayagatar is a full-stack and automation developer who ships production web apps and automation systems, with four products live and 50+ bots delivered since 2023.",
   email: "winayaarya@gmail.com",
   github: "https://github.com/ryuken25",
   githubHandle: "ryuken25",
@@ -25,28 +26,6 @@ export const site = {
   photo: "/arya.jpg",
   photoWebp: "/arya.webp",
   photoAlt: "Portrait of Winayagatar in a dark suit.",
-} as const;
-
-// Blue theme tokens (from the design).
-export const theme = {
-  bg: "#07090f",
-  panel: "#0d111a",
-  panelAlt: "#11161f",
-  border: "#1e2534",
-  borderSoft: "#1b2130",
-  hairline: "#161c28",
-  text: "#e7ecf5",
-  textDim: "#b3bdcd",
-  muted: "#939daf",
-  muted2: "#8b95a7",
-  faint: "#6c7688",
-  faint2: "#798395",
-  accent: "#4c8df6",
-  accentBright: "#8fb8fb",
-  accentBrightest: "#c3d9fd",
-  accentBorder: "#6ba0f8",
-  live: "#34d399",
-  wip: "#fbbf24",
 } as const;
 
 export interface TermLine {
@@ -62,7 +41,8 @@ export const terminalLines: TermLine[] = [
   { mark: "●", tone: "#34d399", text: "LIVE  kenshi-notes  kenshi-notes.vercel.app" },
   { mark: "●", tone: "#34d399", text: "LIVE  ganga-sched   ganga-schedule-universal.vercel.app" },
   { mark: "◐", tone: "#fbbf24", text: "WIP   kenshi-chord  audio → chord, FastAPI + Whisper" },
-  { mark: "›", tone: "#49525f", text: "3 live · 50+ bots delivered · since 2023" },
+  { mark: "●", tone: "#34d399", text: "LIVE  mellogang     mellogang.vercel.app" },
+  { mark: "›", tone: "#49525f", text: "4 live · 50+ bots delivered · since 2023" },
   { mark: "✓", tone: "#4c8df6", text: "open to roles in Kuala Lumpur, Malaysia" },
 ];
 
@@ -76,6 +56,8 @@ export interface Project {
   repo: string;
   badge: Badge;
 }
+
+export const PREVIEW_COUNT = 6;
 
 export const projects: Project[] = [
   {
@@ -106,7 +88,7 @@ export const projects: Project[] = [
     name: "Mellogang Visuals",
     desc: "Ordering and production-tracking system for a photo/video studio: role-based access (Admin/Editor/Client), payment verification, scheduling, OTP + Google OAuth, PDF invoices.",
     tags: ["PHP", "CodeIgniter 4", "MySQL", "React", "Tailwind"],
-    live: "",
+    live: "https://mellogang.vercel.app/",
     repo: "https://github.com/ryuken25/mellogang-website",
     badge: "CLIENT WORK",
   },
@@ -126,6 +108,46 @@ export const projects: Project[] = [
     repo: "",
     badge: "",
   },
+  {
+    name: "Kenshi Downloader",
+    desc: "Media downloader with a queue UI and server-side fetching.",
+    tags: ["Next.js", "TypeScript"],
+    live: "https://kenshi-downloader.vercel.app",
+    repo: "",
+    badge: "LIVE",
+  },
+  {
+    name: "Zano OCR",
+    desc: "Document OCR tool: upload an image, get structured text back through an LLM pass.",
+    tags: ["Next.js", "OCR", "LLM API"],
+    live: "https://zano-ocr.vercel.app",
+    repo: "",
+    badge: "LIVE",
+  },
+  {
+    name: "VERSE",
+    desc: "Immersive 3D Web3 landing experience with scroll-driven camera moves.",
+    tags: ["Three.js", "React Three Fiber"],
+    live: "",
+    repo: "https://github.com/ryuken25",
+    badge: "",
+  },
+  {
+    name: "ShipOS",
+    desc: "Internal dashboard shell for tracking deploys and client work in one place.",
+    tags: ["Next.js", "Postgres"],
+    live: "",
+    repo: "https://github.com/ryuken25",
+    badge: "",
+  },
+  {
+    name: "starter-auth-api",
+    desc: "Reusable auth API starter: sessions, OTP, OAuth, and role guards ready to drop into a project.",
+    tags: ["Node.js", "REST", "JWT"],
+    live: "",
+    repo: "https://github.com/ryuken25",
+    badge: "",
+  },
 ];
 
 export const badgeStyles: Record<
@@ -140,17 +162,36 @@ export const badgeStyles: Record<
 export const filters = ["All", "Live", "AI & Automation", "Client work"] as const;
 export type Filter = (typeof filters)[number];
 
-export interface AlsoShipped {
+export interface ProofStat {
+  count: number;
+  from: number;
+  suffix: string;
+  display: string;
   label: string;
-  href?: string;
 }
 
-export const alsoShipped: AlsoShipped[] = [
-  { label: "kenshi-downloader.vercel.app", href: "https://kenshi-downloader.vercel.app" },
-  { label: "zano-ocr.vercel.app", href: "https://zano-ocr.vercel.app" },
-  { label: "VERSE — immersive 3D Web3 site (Three.js / React Three Fiber)" },
-  { label: "ShipOS" },
-  { label: "starter-auth-api" },
+export const proofStats: ProofStat[] = [
+  { count: 4, from: 0, suffix: "", display: "4", label: "live apps in production" },
+  { count: 50, from: 0, suffix: "+", display: "50+", label: "automation bots delivered" },
+  { count: 2023, from: 1990, suffix: "", display: "2023", label: "freelancing since" },
+];
+
+export const ticker = [
+  "TypeScript",
+  "Next.js",
+  "React",
+  "Node.js",
+  "Python",
+  "FastAPI",
+  "PostgreSQL",
+  "Prisma",
+  "Playwright",
+  "LLM APIs",
+  "AI agents",
+  "Tailwind",
+  "PHP",
+  "MySQL",
+  "Vercel",
 ];
 
 export interface SkillGroup {
@@ -195,6 +236,7 @@ export interface Job {
   role: string;
   meta: string;
   summary: string;
+  current: boolean;
 }
 
 export const experience: Job[] = [
@@ -203,20 +245,31 @@ export const experience: Job[] = [
     meta: "Independent · 2023–Present · Bali, Indonesia",
     summary:
       "Web apps, scraping pipelines, and internal tools for clients — from requirements through deploy and support. Uses LLM APIs for structured extraction and agent workflows, with human review before anything ships.",
+    current: true,
   },
   {
     role: "Full-Stack Developer & Video Editor (contract)",
     meta: "Mellogang Visuals · 2025",
     summary:
       "Built the agency's ordering and production-tracking system (PHP, CodeIgniter 4, MySQL, React/Tailwind).",
+    current: false,
   },
 ];
 
 export const about =
-  "I am an Informatics graduate (S.Kom) from ITB STIKOM Bali, 2026, and I have been freelancing since 2023. I work AI-first: LLM tooling is part of my daily workflow for speed, but I own the architecture, the code review, and the deploys myself. I am based in Bali and ready to relocate to Malaysia with an employer-sponsored Employment Pass.";
+  "I am an Information Systems graduate (S.Kom) from ITB STIKOM Bali, 2026, and I have been freelancing since 2023. I work AI-first: LLM tooling is part of my daily workflow for speed, but I own the architecture, the code review, and the deploys myself. I am based in Bali and ready to relocate to Malaysia with an employer-sponsored Employment Pass.";
 
 export const credentials =
-  "S.Kom Informatics, ITB STIKOM Bali (2026) · BNSP Certified Programmer · 2nd place, OSN-K Informatics 2020";
+  "S.Kom Information Systems, ITB STIKOM Bali (2026) · BNSP Certified Programmer · 2nd place, OSN-K Informatics 2020";
 
 export const contactCopy =
   "Open to full-time roles in Malaysia or remote, plus contract and freelance work.";
+
+// Section eyebrow labels (numbered) from the design.
+export const eyebrows = {
+  projects: "01 — WORK",
+  skills: "02 — STACK",
+  experience: "03 — TRACK RECORD",
+  about: "04 — BACKGROUND",
+  contact: "05 — SAY HELLO",
+} as const;

@@ -32,26 +32,31 @@ const svg = `
   <text x="82" y="330" fill="#8FB8FB" font-family="'Segoe UI', Arial, sans-serif" font-size="34" font-weight="600">AI Full-Stack Developer &amp; Automation Engineer</text>
 
   <!-- live apps -->
-  <g font-family="Consolas, 'Courier New', monospace" font-size="26">
-    <g transform="translate(82,432)">
+  <g font-family="Consolas, 'Courier New', monospace" font-size="24">
+    <g transform="translate(82,420)">
       <circle cx="9" cy="-8" r="7" fill="#34d399"/>
       <text x="30" y="0" fill="#34d399" font-weight="700">LIVE</text>
       <text x="120" y="0" fill="#8FB8FB">kenshi-questpay.vercel.app</text>
     </g>
-    <g transform="translate(82,478)">
+    <g transform="translate(82,460)">
       <circle cx="9" cy="-8" r="7" fill="#34d399"/>
       <text x="30" y="0" fill="#34d399" font-weight="700">LIVE</text>
       <text x="120" y="0" fill="#8FB8FB">kenshi-notes.vercel.app</text>
     </g>
-    <g transform="translate(82,524)">
+    <g transform="translate(82,500)">
       <circle cx="9" cy="-8" r="7" fill="#34d399"/>
       <text x="30" y="0" fill="#34d399" font-weight="700">LIVE</text>
       <text x="120" y="0" fill="#8FB8FB">ganga-schedule-universal.vercel.app</text>
     </g>
+    <g transform="translate(82,540)">
+      <circle cx="9" cy="-8" r="7" fill="#34d399"/>
+      <text x="30" y="0" fill="#34d399" font-weight="700">LIVE</text>
+      <text x="120" y="0" fill="#8FB8FB">mellogang.vercel.app</text>
+    </g>
   </g>
 
-  <line x1="80" y1="566" x2="1120" y2="566" stroke="#161c28" stroke-width="1"/>
-  <text x="80" y="600" fill="#6c7688" font-family="Consolas, 'Courier New', monospace" font-size="21">github.com/ryuken25  ·  winayaarya@gmail.com  ·  Bali → Kuala Lumpur</text>
+  <line x1="80" y1="574" x2="1120" y2="574" stroke="#161c28" stroke-width="1"/>
+  <text x="80" y="604" fill="#6c7688" font-family="Consolas, 'Courier New', monospace" font-size="21">github.com/ryuken25  ·  winayaarya@gmail.com  ·  Bali → Kuala Lumpur</text>
 </svg>`;
 
 const resvg = new Resvg(svg, {

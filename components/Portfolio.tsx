@@ -3,18 +3,21 @@
 import { CSSProperties, ReactNode, useEffect, useRef, useState } from "react";
 import {
   about,
-  alsoShipped,
   badgeStyles,
   contactCopy,
   credentials,
   experience,
+  eyebrows,
   filters,
   type Filter,
+  PREVIEW_COUNT,
   projects,
   type Project,
+  proofStats,
   site,
   skills,
   terminalLines,
+  ticker,
 } from "@/data/content";
 
 const mono = "'JetBrains Mono', monospace";
@@ -45,10 +48,11 @@ const NAV_IDS = ["projects", "skills", "experience", "contact"] as const;
 export default function Portfolio() {
   const rootRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLCanvasElement>(null);
 
-  // Terminal starts fully populated so it reads correctly with JS disabled / during SSR.
   const [count, setCount] = useState(terminalLines.length);
   const [filter, setFilter] = useState<Filter>("All");
+  const [expanded, setExpanded] = useState(false);
   const [active, setActive] = useState<string | null>(null);
 
   // Typed terminal reveal.
@@ -80,9 +84,9 @@ export default function Portfolio() {
           current = id;
         }
       }
-      const atBottom =
-        window.innerHeight + window.scrollY >= doc.scrollHeight - 80;
-      if (atBottom) current = NAV_IDS[NAV_IDS.length - 1];
+      if (window.innerHeight + window.scrollY >= doc.scrollHeight - 80) {
+        current = NAV_IDS[NAV_IDS.length - 1];
+      }
       setActive(current);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -90,15 +94,11 @@ export default function Portfolio() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Reveal-on-scroll (blur + rise). Skipped entirely under reduced motion.
+  // Reveal-on-scroll. Skips elements that carry their own animation (cards, hero).
   useEffect(() => {
     if (prefersReduced()) return;
     const root = rootRef.current;
     if (!root) return;
-    const targets = Array.from(
-      root.querySelectorAll<HTMLElement>("section > *, article"),
-    ).filter((el) => !el.closest("nav") && el.tagName !== "IMG");
-
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
@@ -114,9 +114,18 @@ export default function Portfolio() {
       },
       { rootMargin: "0px 0px -12% 0px", threshold: 0.08 },
     );
-
-    targets.forEach((el, i) => {
+    let i = 0;
+    root.querySelectorAll<HTMLElement>("section > *, article").forEach((el) => {
+      if (
+        el.dataset.noReveal ||
+        el.closest("nav") ||
+        el.style.animationName ||
+        el.querySelector("[data-no-reveal]")
+      ) {
+        return;
+      }
       el.dataset.revealIndex = String(i % 5);
+      i += 1;
       el.style.opacity = "0";
       el.style.transform = "translateY(26px) scale(0.985)";
       el.style.filter = "blur(6px)";
@@ -125,16 +134,140 @@ export default function Portfolio() {
       el.style.willChange = "opacity, transform";
       io.observe(el);
     });
-
     return () => io.disconnect();
   }, []);
 
-  const shown = projects.filter((p) => matchesFilter(p, filter));
+  // Count-up stats.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    if (prefersReduced()) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (!e.isIntersecting) return;
+          const el = e.target as HTMLElement;
+          io.unobserve(el);
+          const to = Number(el.dataset.count);
+          const from = Number(el.dataset.from || 0);
+          const suffix = el.dataset.suffix || "";
+          const dur = 1100;
+          const t0 = performance.now();
+          const step = (t: number) => {
+            const k = Math.min(1, (t - t0) / dur);
+            const eased = 1 - Math.pow(1 - k, 3);
+            el.textContent = Math.round(from + (to - from) * eased) + suffix;
+            if (k < 1) requestAnimationFrame(step);
+          };
+          requestAnimationFrame(step);
+        });
+      },
+      { threshold: 0.5 },
+    );
+    root.querySelectorAll<HTMLElement>("[data-count]").forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+
+  // Interactive dot-grid canvas backdrop.
+  useEffect(() => {
+    const cv = gridRef.current;
+    if (!cv || prefersReduced()) return;
+    const ctx = cv.getContext("2d");
+    if (!ctx) return;
+    const mouse = { x: -999, y: -999 };
+    let w = 0;
+    let h = 0;
+    let raf = 0;
+    const resize = () => {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      w = cv.clientWidth;
+      h = cv.clientHeight;
+      cv.width = Math.floor(w * dpr);
+      cv.height = Math.floor(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    resize();
+    const onResize = () => resize();
+    const onMove = (e: PointerEvent) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    };
+    window.addEventListener("resize", onResize);
+    window.addEventListener("pointermove", onMove, { passive: true });
+    const gap = 36;
+    const R = 170;
+    const draw = (t: number) => {
+      ctx.clearRect(0, 0, w, h);
+      for (let y = gap / 2; y < h; y += gap) {
+        for (let x = gap / 2; x < w; x += gap) {
+          const dx = x - mouse.x;
+          const dy = y - mouse.y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          const near = d < R ? 1 - d / R : 0;
+          const shimmer = 0.5 + 0.5 * Math.sin(t / 1400 + (x + y) / 260);
+          const a = 0.05 + shimmer * 0.04 + near * 0.5;
+          const r = 1 + near * 1.6;
+          ctx.beginPath();
+          ctx.fillStyle =
+            "rgba(" +
+            Math.round(110 + near * 30) +
+            "," +
+            Math.round(150 + near * 40) +
+            ",246," +
+            a.toFixed(3) +
+            ")";
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("pointermove", onMove);
+    };
+  }, []);
+
+  const all = projects.filter((p) => matchesFilter(p, filter));
+  const shown = expanded ? all : all.slice(0, PREVIEW_COUNT);
+  const hasMore = all.length > PREVIEW_COUNT;
+
+  const changeFilter = (f: Filter) => {
+    setFilter(f);
+    setExpanded(false);
+  };
 
   const navLinkStyle = (id: string): CSSProperties =>
-    active === id
-      ? { color: "#e7ecf5", borderBottom: "1px solid #4c8df6" }
-      : {};
+    active === id ? { color: "#e7ecf5", borderBottom: "1px solid #4c8df6" } : {};
+
+  const onCardMove = (e: React.PointerEvent<HTMLElement>) => {
+    if (prefersReduced()) return;
+    const el = e.currentTarget;
+    const r = el.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+    el.style.background =
+      "radial-gradient(420px circle at " +
+      x +
+      "px " +
+      y +
+      "px, rgba(76,141,246,0.11), rgba(13,17,26,0) 60%), #0d111a";
+    const rx = ((y / r.height) - 0.5) * -5;
+    const ry = ((x / r.width) - 0.5) * 5;
+    el.style.transform =
+      "perspective(900px) translateY(-4px) rotateX(" +
+      rx.toFixed(2) +
+      "deg) rotateY(" +
+      ry.toFixed(2) +
+      "deg)";
+  };
+  const onCardLeave = (e: React.PointerEvent<HTMLElement>) => {
+    const el = e.currentTarget;
+    el.style.background = "#0d111a";
+    el.style.transform = "";
+  };
 
   return (
     <div ref={rootRef}>
@@ -155,35 +288,47 @@ export default function Portfolio() {
         }}
       />
 
-      <a
-        href="#projects"
-        style={{
-          position: "absolute",
-          left: -9999,
-          top: 0,
-          zIndex: 100,
-        }}
-        onFocus={(e) => {
-          Object.assign(e.currentTarget.style, {
-            left: "16px",
-            top: "16px",
-            background: "#4c8df6",
-            color: "#fff",
-            padding: "8px 14px",
-            borderRadius: "8px",
-            fontFamily: mono,
-            fontSize: "13px",
-          });
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.left = "-9999px";
-        }}
-      >
+      <a href="#projects" className="skip-link" style={skipStyle}>
         Skip to projects
       </a>
 
       <div style={{ minHeight: "100vh", background: "#07090f", padding: "0 clamp(18px, 5vw, 64px)" }}>
-        <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+        {/* animated backdrop */}
+        <div aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}>
+          <div
+            style={{
+              position: "absolute",
+              top: "-18vh",
+              left: "-10vw",
+              width: "62vw",
+              height: "62vw",
+              borderRadius: "50%",
+              background: "radial-gradient(circle, rgba(76,141,246,0.16), rgba(76,141,246,0) 68%)",
+              filter: "blur(30px)",
+              animation: "drift1 26s ease-in-out infinite",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              bottom: "-22vh",
+              right: "-14vw",
+              width: "54vw",
+              height: "54vw",
+              borderRadius: "50%",
+              background: "radial-gradient(circle, rgba(52,211,153,0.10), rgba(52,211,153,0) 68%)",
+              filter: "blur(34px)",
+              animation: "drift2 34s ease-in-out infinite",
+            }}
+          />
+        </div>
+        <canvas
+          ref={gridRef}
+          aria-hidden="true"
+          style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 0, pointerEvents: "none" }}
+        />
+
+        <div style={{ maxWidth: 1080, margin: "0 auto", position: "relative", zIndex: 1 }}>
           {/* NAV */}
           <nav
             aria-label="Primary"
@@ -202,26 +347,11 @@ export default function Portfolio() {
               borderBottom: "1px solid #161c28",
             }}
           >
-            <a
-              href="#top"
-              style={{
-                fontFamily: display,
-                fontWeight: 700,
-                fontSize: 15,
-                letterSpacing: "-0.01em",
-                color: "#e7ecf5",
-                marginRight: "auto",
-              }}
-            >
+            <a href="#top" style={{ fontFamily: display, fontWeight: 700, fontSize: 15, letterSpacing: "-0.01em", color: "#e7ecf5", marginRight: "auto" }}>
               {site.name}
             </a>
             {NAV_IDS.map((id) => (
-              <a
-                key={id}
-                href={`#${id}`}
-                className="nav-link"
-                style={{ fontFamily: mono, fontSize: 12, letterSpacing: "0.04em", ...navLinkStyle(id) }}
-              >
+              <a key={id} href={`#${id}`} className="nav-link" style={{ fontFamily: mono, fontSize: 12, letterSpacing: "0.04em", ...navLinkStyle(id) }}>
                 {id}
               </a>
             ))}
@@ -238,7 +368,7 @@ export default function Portfolio() {
               padding: "clamp(44px, 8vw, 100px) 0 clamp(36px, 6vw, 68px)",
             }}
           >
-            <div style={{ animation: "riseIn 0.5s ease both" }}>
+            <div data-no-reveal="1" style={{ animation: "riseIn 0.5s ease both" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 22 }}>
                 <picture>
                   <source srcSet={site.photoWebp} type="image/webp" />
@@ -247,33 +377,16 @@ export default function Portfolio() {
                     alt={site.photoAlt}
                     width={84}
                     height={84}
-                    style={{
-                      width: 84,
-                      height: 84,
-                      flex: "none",
-                      borderRadius: "50%",
-                      objectFit: "cover",
-                      objectPosition: "center top",
-                      border: "1px solid #232b3b",
-                    }}
+                    style={{ width: 84, height: 84, flex: "none", borderRadius: "50%", objectFit: "cover", objectPosition: "center top", border: "1px solid #232b3b" }}
                   />
                 </picture>
-                <p
-                  style={{
-                    fontFamily: mono,
-                    fontSize: 12,
-                    color: "#4c8df6",
-                    letterSpacing: "0.14em",
-                    textTransform: "uppercase",
-                    margin: 0,
-                    lineHeight: 1.6,
-                  }}
-                >
+                <p style={{ fontFamily: mono, fontSize: 12, color: "#4c8df6", letterSpacing: "0.14em", textTransform: "uppercase", margin: 0, lineHeight: 1.6 }}>
                   {site.locationLine1}
                   <br />
                   {site.locationLine2}
                 </p>
               </div>
+
               <h1
                 style={{
                   fontFamily: display,
@@ -282,138 +395,83 @@ export default function Portfolio() {
                   lineHeight: 0.98,
                   letterSpacing: "-0.035em",
                   margin: "0 0 14px",
+                  background: "linear-gradient(100deg, #e7ecf5 32%, #8fb8fb 46%, #e7ecf5 60%)",
+                  backgroundSize: "240% 100%",
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                  color: "transparent",
+                  animation: "sheen 8s linear infinite",
                 }}
               >
                 {site.name}
               </h1>
-              <p
+
+              <div
                 style={{
-                  fontFamily: display,
-                  fontSize: "clamp(17px, 2.2vw, 21px)",
-                  color: "#b3bdcd",
-                  margin: "0 0 18px",
-                  lineHeight: 1.3,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 9,
+                  padding: "7px 13px 7px 11px",
+                  borderRadius: 999,
+                  border: "1px solid rgba(52,211,153,0.32)",
+                  background: "rgba(52,211,153,0.07)",
+                  margin: "0 0 16px",
                 }}
               >
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#34d399", animation: "pulseDot 2.2s ease-in-out infinite" }} />
+                <span style={{ fontFamily: mono, fontSize: 11, letterSpacing: "0.08em", color: "#6ee7b7" }}>{site.availability}</span>
+              </div>
+
+              <p style={{ fontFamily: display, fontSize: "clamp(17px, 2.2vw, 21px)", color: "#b3bdcd", margin: "0 0 18px", lineHeight: 1.3 }}>
                 {site.title}
               </p>
-              <p
-                style={{
-                  fontSize: "clamp(15px, 1.7vw, 17px)",
-                  lineHeight: 1.6,
-                  color: "#949eb0",
-                  maxWidth: "46ch",
-                  margin: "0 0 10px",
-                  textWrap: "pretty",
-                }}
-              >
+              <p style={{ fontSize: "clamp(15px, 1.7vw, 17px)", lineHeight: 1.6, color: "#949eb0", maxWidth: "46ch", margin: "0 0 10px", textWrap: "pretty" }}>
                 {site.heroOneLiner}
               </p>
-              <p
-                style={{
-                  fontFamily: mono,
-                  fontSize: 12.5,
-                  lineHeight: 1.6,
-                  color: "#6c7688",
-                  margin: "0 0 30px",
-                }}
-              >
-                {site.relocation}
-              </p>
+              <p style={{ fontFamily: mono, fontSize: 12.5, lineHeight: 1.6, color: "#6c7688", margin: "0 0 30px" }}>{site.relocation}</p>
+
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
                 <a href="#projects" className="btn-primary" style={ctaPrimary}>
                   View projects
                 </a>
-                <a
-                  href={site.github}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-ghost"
-                  style={ctaGhost}
-                >
-                  GitHub
+                <a href={site.github} target="_blank" rel="noopener noreferrer" aria-label="GitHub" title={`github.com/${site.githubHandle}`} className="icon-btn" style={iconBtn}>
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.95 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.6 9.6 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.85-2.34 4.7-4.57 4.94.36.31.68.92.68 1.86v2.75c0 .27.18.58.69.48A10 10 0 0 0 12 2z" />
+                  </svg>
                 </a>
-                <a href={`mailto:${site.email}`} className="btn-ghost" style={ctaGhost}>
-                  Email me
+                <a href={`mailto:${site.email}`} aria-label="Email" title={site.email} className="icon-btn" style={iconBtn}>
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="2.5" y="4.5" width="19" height="15" rx="2.5" />
+                    <path d="M3 6.5l9 6.5 9-6.5" />
+                  </svg>
                 </a>
               </div>
+
               <p style={{ margin: "18px 0 0" }}>
-                <a
-                  href={site.resume}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="res-link"
-                  style={{
-                    fontFamily: mono,
-                    fontSize: 12.5,
-                    color: "#8b95a7",
-                    borderBottom: "1px solid #232b3b",
-                    paddingBottom: 2,
-                  }}
-                >
+                <a href={site.resume} target="_blank" rel="noopener noreferrer" className="res-link" style={{ fontFamily: mono, fontSize: 12.5, color: "#8b95a7", borderBottom: "1px solid #232b3b", paddingBottom: 2 }}>
                   Download resume (PDF)
                 </a>
               </p>
             </div>
 
             {/* Terminal */}
-            <div
-              style={{
-                border: "1px solid #1e2534",
-                borderRadius: 12,
-                background: "#0d111a",
-                overflow: "hidden",
-                boxShadow: "0 24px 60px -30px rgba(76,141,246,0.45)",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "11px 14px",
-                  borderBottom: "1px solid #1a202c",
-                  background: "#101724",
-                }}
-              >
+            <div data-no-reveal="1" style={{ border: "1px solid #1e2534", borderRadius: 12, background: "#0d111a", overflow: "hidden", boxShadow: "0 24px 60px -30px rgba(76,141,246,0.45)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 14px", borderBottom: "1px solid #1a202c", background: "#101724" }}>
                 <span style={dot} />
                 <span style={dot} />
                 <span style={dot} />
-                <span style={{ fontFamily: mono, fontSize: 11, color: "#6c7688", marginLeft: 6 }}>
-                  {site.cliHandle}@status — deploy log
-                </span>
+                <span style={{ fontFamily: mono, fontSize: 11, color: "#6c7688", marginLeft: 6 }}>{site.cliHandle}@status — deploy log</span>
               </div>
-              <div
-                style={{
-                  padding: "16px 16px 20px",
-                  fontFamily: mono,
-                  fontSize: 12.5,
-                  lineHeight: 1.85,
-                  minHeight: 268,
-                }}
-              >
+              <div style={{ padding: "16px 16px 20px", fontFamily: mono, fontSize: 12.5, lineHeight: 1.85, minHeight: 268 }}>
                 {terminalLines.slice(0, count).map((line, i) => (
-                  <div
-                    key={i}
-                    style={{ display: "flex", gap: 8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
-                  >
+                  <div key={i} style={{ display: "flex", gap: 8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     <span style={{ color: line.tone, flex: "none" }}>{line.mark}</span>
-                    <span style={{ color: "#cdd6e4", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {line.text}
-                    </span>
+                    <span style={{ color: "#cdd6e4", overflow: "hidden", textOverflow: "ellipsis" }}>{line.text}</span>
                   </div>
                 ))}
                 <div style={{ display: "flex", gap: 8, alignItems: "center", color: "#4c8df6" }}>
                   <span>$</span>
-                  <span
-                    style={{
-                      width: 8,
-                      height: 15,
-                      background: "#4c8df6",
-                      display: "inline-block",
-                      animation: "blink 1.05s step-end infinite",
-                    }}
-                  />
+                  <span style={{ width: 8, height: 15, background: "#4c8df6", display: "inline-block", animation: "blink 1.05s step-end infinite" }} />
                 </div>
               </div>
             </div>
@@ -432,24 +490,43 @@ export default function Portfolio() {
               marginBottom: "clamp(52px, 8vw, 88px)",
             }}
           >
-            {[
-              ["3", "live apps in production"],
-              ["50+", "automation bots delivered"],
-              ["2023", "freelancing since"],
-            ].map(([value, label]) => (
-              <div key={label}>
-                <p style={{ fontFamily: display, fontWeight: 700, fontSize: "clamp(26px, 3.4vw, 34px)", margin: 0, letterSpacing: "-0.02em" }}>
-                  {value}
+            {proofStats.map((s) => (
+              <div key={s.label}>
+                <p
+                  data-count={s.count}
+                  data-from={s.from || undefined}
+                  data-suffix={s.suffix || undefined}
+                  style={{ fontFamily: display, fontWeight: 700, fontSize: "clamp(26px, 3.4vw, 34px)", margin: 0, letterSpacing: "-0.02em" }}
+                >
+                  {s.display}
                 </p>
-                <p style={{ fontFamily: mono, fontSize: 11.5, color: "#798395", margin: "4px 0 0", letterSpacing: "0.05em" }}>
-                  {label}
-                </p>
+                <p style={{ fontFamily: mono, fontSize: 11.5, color: "#798395", margin: "4px 0 0", letterSpacing: "0.05em" }}>{s.label}</p>
               </div>
             ))}
           </section>
 
+          {/* TICKER */}
+          <div
+            aria-hidden="true"
+            style={{
+              overflow: "hidden",
+              margin: "0 0 clamp(44px, 7vw, 76px)",
+              maskImage: "linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent)",
+              WebkitMaskImage: "linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent)",
+            }}
+          >
+            <div style={{ display: "flex", width: "max-content", gap: 34, animation: "marquee 32s linear infinite" }}>
+              {ticker.concat(ticker).map((t, i) => (
+                <span key={i} style={{ fontFamily: mono, fontSize: 12, letterSpacing: "0.08em", color: "#5d6778", whiteSpace: "nowrap" }}>
+                  {t}
+                </span>
+              ))}
+            </div>
+          </div>
+
           {/* PROJECTS */}
           <section id="projects" style={{ paddingBottom: "clamp(52px, 8vw, 88px)" }}>
+            <p style={eyebrowStyle}>{eyebrows.projects}</p>
             <h2 style={h2Style}>Projects</h2>
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, margin: "-6px 0 20px" }}>
               {filters.map((f) => {
@@ -458,7 +535,7 @@ export default function Portfolio() {
                   <button
                     key={f}
                     type="button"
-                    onClick={() => setFilter(f)}
+                    onClick={() => changeFilter(f)}
                     aria-pressed={on}
                     className="filter-btn"
                     style={{
@@ -478,16 +555,18 @@ export default function Portfolio() {
                 );
               })}
               <span style={{ fontFamily: mono, fontSize: 11, color: "#6c7688", marginLeft: "auto" }}>
-                {shown.length} / {projects.length}
+                {shown.length} / {all.length}
               </span>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(288px, 1fr))", gap: 16 }}>
-              {shown.map((p) => {
+              {shown.map((p, i) => {
                 const bs = p.badge ? badgeStyles[p.badge] : null;
                 return (
                   <article
                     key={p.name}
+                    onPointerMove={onCardMove}
+                    onPointerLeave={onCardLeave}
                     className="card"
                     style={{
                       border: "1px solid #1b2130",
@@ -497,40 +576,23 @@ export default function Portfolio() {
                       display: "flex",
                       flexDirection: "column",
                       gap: 12,
+                      transformStyle: "preserve-3d",
+                      animation: "cardIn 0.55s cubic-bezier(0.22,0.61,0.36,1) both",
+                      animationDelay: `${i * 55}ms`,
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-                      <h3 style={{ fontFamily: display, fontWeight: 700, fontSize: 17.5, margin: 0, letterSpacing: "-0.015em" }}>
-                        {p.name}
-                      </h3>
+                      <h3 style={{ fontFamily: display, fontWeight: 700, fontSize: 17.5, margin: 0, letterSpacing: "-0.015em" }}>{p.name}</h3>
                       {bs ? (
-                        <span
-                          style={{
-                            fontFamily: mono,
-                            fontSize: 9.5,
-                            letterSpacing: "0.1em",
-                            padding: "4px 7px",
-                            borderRadius: 4,
-                            whiteSpace: "nowrap",
-                            flex: "none",
-                            color: bs.fg,
-                            background: bs.bg,
-                            border: `1px solid ${bs.bd}`,
-                          }}
-                        >
+                        <span style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: "0.1em", padding: "4px 7px", borderRadius: 4, whiteSpace: "nowrap", flex: "none", color: bs.fg, background: bs.bg, border: `1px solid ${bs.bd}` }}>
                           {p.badge}
                         </span>
                       ) : null}
                     </div>
-                    <p style={{ fontSize: 14, lineHeight: 1.6, color: "#939daf", margin: 0, textWrap: "pretty" }}>
-                      {p.desc}
-                    </p>
+                    <p style={{ fontSize: 14, lineHeight: 1.6, color: "#939daf", margin: 0, textWrap: "pretty" }}>{p.desc}</p>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: "auto" }}>
                       {p.tags.map((t) => (
-                        <span
-                          key={t}
-                          style={{ fontFamily: mono, fontSize: 10.5, color: "#878fa1", border: "1px solid #1e2534", borderRadius: 4, padding: "3px 7px" }}
-                        >
+                        <span key={t} style={{ fontFamily: mono, fontSize: 10.5, color: "#878fa1", border: "1px solid #1e2534", borderRadius: 4, padding: "3px 7px" }}>
                           {t}
                         </span>
                       ))}
@@ -538,24 +600,12 @@ export default function Portfolio() {
                     {(p.live || p.repo) && (
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 14, paddingTop: 4 }}>
                         {p.live ? (
-                          <a
-                            href={p.live}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="link-live"
-                            style={{ fontFamily: mono, fontSize: 11.5, color: "#8fb8fb", borderBottom: "1px solid #2c364a", paddingBottom: 2 }}
-                          >
+                          <a href={p.live} target="_blank" rel="noopener noreferrer" className="link-live" style={{ fontFamily: mono, fontSize: 11.5, color: "#8fb8fb", borderBottom: "1px solid #2c364a", paddingBottom: 2 }}>
                             open live →
                           </a>
                         ) : null}
                         {p.repo ? (
-                          <a
-                            href={p.repo}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="link-repo"
-                            style={{ fontFamily: mono, fontSize: 11.5, color: "#8b95a7", borderBottom: "1px solid #232b3b", paddingBottom: 2 }}
-                          >
+                          <a href={p.repo} target="_blank" rel="noopener noreferrer" className="link-repo" style={{ fontFamily: mono, fontSize: 11.5, color: "#8b95a7", borderBottom: "1px solid #232b3b", paddingBottom: 2 }}>
                             repo
                           </a>
                         ) : null}
@@ -566,44 +616,50 @@ export default function Portfolio() {
               })}
             </div>
 
-            <div style={{ marginTop: 22, display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px 14px" }}>
-              <span style={{ fontFamily: mono, fontSize: 11, color: "#6c7688", letterSpacing: "0.08em" }}>ALSO SHIPPED</span>
-              {alsoShipped.map((s) =>
-                s.href ? (
-                  <a
-                    key={s.label}
-                    href={s.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="also-link"
-                    style={{ fontFamily: mono, fontSize: 11.5, color: "#8b95a7" }}
-                  >
-                    {s.label}
-                  </a>
-                ) : (
-                  <span key={s.label} style={{ fontFamily: mono, fontSize: 11.5, color: "#6c7688" }}>
-                    {s.label}
+            {hasMore && (
+              <div style={{ display: "flex", justifyContent: "center", marginTop: 26 }}>
+                <button
+                  type="button"
+                  onClick={() => setExpanded((v) => !v)}
+                  className="more-btn"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 10,
+                    fontFamily: mono,
+                    fontSize: 12,
+                    letterSpacing: "0.06em",
+                    padding: "13px 22px",
+                    borderRadius: 999,
+                    cursor: "pointer",
+                    color: "#e7ecf5",
+                    background: "#11161f",
+                    border: "1px solid #1e2534",
+                    minHeight: 44,
+                  }}
+                >
+                  <span>{expanded ? "Show less" : `View all ${all.length} projects`}</span>
+                  <span style={{ display: "inline-flex", transition: "transform 0.28s cubic-bezier(0.22,0.61,0.36,1)", transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M5 9l7 7 7-7" />
+                    </svg>
                   </span>
-                ),
-              )}
-            </div>
+                </button>
+              </div>
+            )}
           </section>
 
           {/* SKILLS */}
           <section id="skills" style={{ paddingBottom: "clamp(52px, 8vw, 88px)" }}>
+            <p style={eyebrowStyle}>{eyebrows.skills}</p>
             <h2 style={h2Style}>Skills</h2>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(288px, 1fr))", gap: 16 }}>
               {skills.map((g) => (
                 <div key={g.group} style={{ borderTop: "1px solid #1b2130", paddingTop: 14 }}>
-                  <p style={{ fontFamily: mono, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#4c8df6", margin: "0 0 12px" }}>
-                    {g.group}
-                  </p>
+                  <p style={{ fontFamily: mono, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#4c8df6", margin: "0 0 12px" }}>{g.group}</p>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                     {g.items.map((s) => (
-                      <span
-                        key={s}
-                        style={{ fontFamily: mono, fontSize: 11.5, color: "#b3bdcd", background: "#11161f", border: "1px solid #1b2130", borderRadius: 5, padding: "5px 9px" }}
-                      >
+                      <span key={s} style={{ fontFamily: mono, fontSize: 11.5, color: "#b3bdcd", background: "#11161f", border: "1px solid #1b2130", borderRadius: 5, padding: "5px 9px" }}>
                         {s}
                       </span>
                     ))}
@@ -615,13 +671,12 @@ export default function Portfolio() {
 
           {/* EXPERIENCE */}
           <section id="experience" style={{ paddingBottom: "clamp(52px, 8vw, 88px)" }}>
+            <p style={eyebrowStyle}>{eyebrows.experience}</p>
             <h2 style={h2Style}>Experience</h2>
             <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
               {experience.map((job) => (
-                <div
-                  key={job.role}
-                  style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "8px 32px", borderTop: "1px solid #1b2130", paddingTop: 18 }}
-                >
+                <div key={job.role} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "8px 32px", borderTop: "1px solid #1b2130", paddingTop: 18, position: "relative" }}>
+                  <span aria-hidden="true" style={{ position: "absolute", top: -4, left: 0, width: 7, height: 7, borderRadius: "50%", background: job.current ? "#4c8df6" : "#2a3245" }} />
                   <div>
                     <h3 style={{ fontFamily: display, fontWeight: 700, fontSize: 17, margin: "0 0 4px" }}>{job.role}</h3>
                     <p style={{ fontFamily: mono, fontSize: 11.5, color: "#798395", margin: 0 }}>{job.meta}</p>
@@ -633,91 +688,78 @@ export default function Portfolio() {
           </section>
 
           {/* ABOUT */}
-          <section
-            style={{
-              paddingBottom: "clamp(52px, 8vw, 88px)",
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(288px, 1fr))",
-              gap: "20px 40px",
-              borderTop: "1px solid #161c28",
-              paddingTop: "clamp(28px, 5vw, 40px)",
-            }}
-          >
-            <h2 style={{ ...h2Style, margin: 0 }}>About</h2>
+          <section style={{ paddingBottom: "clamp(52px, 8vw, 88px)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(288px, 1fr))", gap: "20px 40px", borderTop: "1px solid #161c28", paddingTop: "clamp(28px, 5vw, 40px)" }}>
             <div>
-              <p style={{ fontSize: "clamp(15px, 1.7vw, 17px)", lineHeight: 1.7, color: "#abb5c6", margin: "0 0 14px", textWrap: "pretty" }}>
-                {about}
-              </p>
+              <p style={eyebrowStyle}>{eyebrows.about}</p>
+              <h2 style={{ ...h2Style, margin: 0 }}>About</h2>
+            </div>
+            <div>
+              <p style={{ fontSize: "clamp(15px, 1.7vw, 17px)", lineHeight: 1.7, color: "#abb5c6", margin: "0 0 14px", textWrap: "pretty" }}>{about}</p>
               <p style={{ fontFamily: mono, fontSize: 11.5, lineHeight: 1.7, color: "#6c7688", margin: 0 }}>{credentials}</p>
             </div>
           </section>
 
           {/* CONTACT */}
-          <section
-            id="contact"
-            style={{ paddingBottom: "clamp(48px, 7vw, 72px)", borderTop: "1px solid #161c28", paddingTop: "clamp(28px, 5vw, 44px)" }}
-          >
+          <section id="contact" style={{ paddingBottom: "clamp(48px, 7vw, 72px)", borderTop: "1px solid #161c28", paddingTop: "clamp(28px, 5vw, 44px)" }}>
+            <p style={eyebrowStyle}>{eyebrows.contact}</p>
             <h2 style={{ ...h2Style, fontSize: "clamp(26px, 3.4vw, 36px)", margin: "0 0 12px" }}>Contact</h2>
-            <p style={{ fontSize: "clamp(15px, 1.7vw, 17px)", lineHeight: 1.6, color: "#939daf", margin: "0 0 24px", maxWidth: "52ch" }}>
-              {contactCopy}
-            </p>
+            <p style={{ fontSize: "clamp(15px, 1.7vw, 17px)", lineHeight: 1.6, color: "#939daf", margin: "0 0 24px", maxWidth: "52ch" }}>{contactCopy}</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12 }}>
               <ContactCard
                 href={`mailto:${site.email}`}
                 primary
+                label="EMAIL"
+                value={site.email}
                 icon={
                   <>
                     <rect x="2.5" y="4.5" width="19" height="15" rx="2.5" />
                     <path d="M3 6.5l9 6.5 9-6.5" />
                   </>
                 }
-                label="EMAIL"
-                value={site.email}
               />
               <ContactCard
                 href={site.whatsapp}
                 external
+                label="WHATSAPP"
+                value="Chat on WhatsApp"
                 icon={
                   <>
                     <path d="M12 3a9 9 0 0 0-7.7 13.7L3 21l4.4-1.3A9 9 0 1 0 12 3z" />
                     <path d="M9 8.6c0 3.2 2.6 5.8 5.8 5.8 0 0 .9-.1.9-1.1 0-.6-1.5-1.2-1.9-1-.3.2-.5.8-.9.7-1-.3-2.2-1.5-2.5-2.5-.1-.4.5-.6.7-.9.2-.4-.4-1.9-1-1.9-1 0-1.1.9-1.1.9z" />
                   </>
                 }
-                label="WHATSAPP"
-                value="Chat on WhatsApp"
               />
               <ContactCard
                 href={site.telegram}
                 external
+                label="TELEGRAM"
+                value={`@${site.telegramHandle}`}
                 icon={
                   <>
                     <path d="M21.5 3.8L2.9 10.9c-.6.2-.6 1 0 1.2l4.4 1.5 1.6 5c.2.6 1 .7 1.3.2l2.3-3.2 4.6 3.4c.5.4 1.2.1 1.3-.5l3.7-13.6c.2-.7-.5-1.3-1.1-1.1z" />
                     <path d="M7.3 13.6l10.9-7.4-6.4 8.9" />
                   </>
                 }
-                label="TELEGRAM"
-                value={`@${site.telegramHandle}`}
               />
               <ContactCard
                 href={site.github}
                 external
+                label="GITHUB"
+                value={site.githubHandle}
                 icon={
                   <>
                     <path d="M9 7l-5 5 5 5" />
                     <path d="M15 7l5 5-5 5" />
                   </>
                 }
-                label="GITHUB"
-                value={site.githubHandle}
               />
             </div>
           </section>
 
           {/* FOOTER */}
-          <footer
-            style={{ borderTop: "1px solid #161c28", padding: "22px 0 34px", display: "flex", flexWrap: "wrap", gap: "8px 18px", justifyContent: "space-between" }}
-          >
+          <footer style={{ borderTop: "1px solid #161c28", padding: "22px 0 34px", display: "flex", flexWrap: "wrap", gap: "8px 18px", justifyContent: "space-between" }}>
             <p style={{ fontFamily: mono, fontSize: 11.5, color: "#6c7688", margin: 0 }}>{site.fullName}</p>
+            <a href="#top" className="top-link" style={{ fontFamily: mono, fontSize: 11.5, color: "#8b95a7" }}>back to top ↑</a>
             <p style={{ fontFamily: mono, fontSize: 11.5, color: "#6c7688", margin: 0 }}>2026</p>
           </footer>
         </div>
@@ -725,6 +767,8 @@ export default function Portfolio() {
     </div>
   );
 }
+
+const skipStyle: CSSProperties = { position: "absolute", left: -9999, top: 0, zIndex: 100 };
 
 const ctaPrimary: CSSProperties = {
   display: "inline-flex",
@@ -739,20 +783,27 @@ const ctaPrimary: CSSProperties = {
   minHeight: 44,
 };
 
-const ctaGhost: CSSProperties = {
+const iconBtn: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
-  padding: "13px 22px",
+  justifyContent: "center",
+  width: 46,
+  height: 46,
   borderRadius: 8,
   background: "#11161f",
   color: "#e7ecf5",
-  fontWeight: 600,
-  fontSize: 14.5,
   border: "1px solid #1e2534",
-  minHeight: 44,
 };
 
 const dot: CSSProperties = { width: 9, height: 9, borderRadius: "50%", background: "#2a3245" };
+
+const eyebrowStyle: CSSProperties = {
+  fontFamily: mono,
+  fontSize: 11,
+  letterSpacing: "0.16em",
+  color: "#4c8df6",
+  margin: "0 0 10px",
+};
 
 const h2Style: CSSProperties = {
   fontFamily: display,
@@ -794,24 +845,11 @@ function ContactCard({
         minHeight: 44,
       }}
     >
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ flex: "none" }}
-        aria-hidden="true"
-      >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flex: "none" }} aria-hidden="true">
         {icon}
       </svg>
       <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-        <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.12em", color: primary ? undefined : "#6c7688", opacity: primary ? 0.8 : 1 }}>
-          {label}
-        </span>
+        <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.12em", color: primary ? undefined : "#6c7688", opacity: primary ? 0.8 : 1 }}>{label}</span>
         <span style={{ fontWeight: 600, fontSize: 13.5, overflow: "hidden", textOverflow: "ellipsis" }}>{value}</span>
       </span>
     </a>
