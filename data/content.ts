@@ -234,25 +234,51 @@ export const skills: SkillGroup[] = [
 
 export interface Job {
   role: string;
+  period: string;
+  periodTone: "live" | "accent";
   meta: string;
-  summary: string;
-  current: boolean;
+  desc?: string;
+  bullets: string[];
+  tags: string[];
+  pulse: boolean;
 }
 
 export const experience: Job[] = [
   {
     role: "Freelance Full-Stack & Automation Developer",
-    meta: "Independent · 2023–Present · Bali, Indonesia",
-    summary:
-      "Web apps, scraping pipelines, and internal tools for clients — from requirements through deploy and support. Uses LLM APIs for structured extraction and agent workflows, with human review before anything ships.",
-    current: true,
+    period: "2023 — PRESENT",
+    periodTone: "live",
+    meta: "Independent · Bali, Indonesia",
+    desc: "Web apps, scraping pipelines, and internal tools for clients — from requirements through deploy and support. Uses LLM APIs for structured extraction and agent workflows, with human review before anything ships.",
+    bullets: [
+      "4 products running in production on Vercel + Neon",
+      "50+ automation bots delivered for scraping, Telegram flows, and bulk processing",
+      "Direct client ownership: scoping, pricing, delivery, and post-launch support",
+    ],
+    tags: ["TypeScript", "Next.js", "Python", "Playwright", "LLM APIs"],
+    pulse: true,
   },
   {
     role: "Full-Stack Developer & Video Editor (contract)",
-    meta: "Mellogang Visuals · 2025",
-    summary:
-      "Built the agency's ordering and production-tracking system (PHP, CodeIgniter 4, MySQL, React/Tailwind).",
-    current: false,
+    period: "2025",
+    periodTone: "accent",
+    meta: "Mellogang Visuals · photo/video studio",
+    desc: "Built the agency's ordering and production-tracking system end to end, now live at mellogang.vercel.app.",
+    bullets: [
+      "Role-based access for Admin / Editor / Client with OTP + Google OAuth",
+      "Payment verification, shoot scheduling, and PDF invoice generation",
+    ],
+    tags: ["PHP", "CodeIgniter 4", "MySQL", "React", "Tailwind"],
+    pulse: false,
+  },
+  {
+    role: "S.Kom Information Systems",
+    period: "2026",
+    periodTone: "accent",
+    meta: "ITB STIKOM Bali",
+    bullets: ["BNSP Certified Programmer", "2nd place, OSN-K Informatics 2020"],
+    tags: [],
+    pulse: false,
   },
 ];
 
