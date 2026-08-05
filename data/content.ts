@@ -1,7 +1,7 @@
 // Single source of truth for all page copy and data.
 // Mirrors the approved Claude Design (Portfolio.dc.html): blue accent, name "Winayagatar".
 
-export const SITE_URL = "https://winayagatar.vercel.app";
+export const SITE_URL = "https://wyna.dev";
 
 export const site = {
   name: "Winayagatar",
@@ -60,6 +60,14 @@ export interface Project {
 export const PREVIEW_COUNT = 6;
 
 export const projects: Project[] = [
+  {
+    name: "Kaigo Kitty",
+    desc: "Japanese caregiver-certification (介護福祉士) exam prep: 13 sections, 152 levels, a six-year mock exam, and a three-mode 漢字/ふりがな/Indonesian switch built on a custom flex ruby layout instead of the browser engine, so readings never collide and Safari matches Chrome. Ships behind gates that measure real glyph boxes in WebKit, Firefox and Chromium at seven viewport widths.",
+    tags: ["React", "Vite", "Neon Postgres", "Vercel Functions"],
+    live: "https://kaigo-kitty.vercel.app",
+    repo: "https://github.com/ryuken25/kenshi-kaigo-e-learning",
+    badge: "LIVE",
+  },
   {
     name: "QuestPay",
     desc: "Web3 creator checkout desk. Built and run solo: UI, database, payment/release flow, production deploy.",
